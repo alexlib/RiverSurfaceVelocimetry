@@ -1,10 +1,6 @@
 import cv2
 import numpy as np
 
-real_fai = 71.6
-img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
-img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
 
 def calPartialDerivative(I, axis=0, order=4):
     """
@@ -22,12 +18,14 @@ def calPartialDerivative(I, axis=0, order=4):
         :return: 对应index位置的差分偏导值
         """
         # df / dx = (f(x + 2) - 8f(x+1) + 8f(x - 1) - f(x - 2)) / 12delta_x
-        # df / dx = (f(x + 3) - 9f(x+1) + 45(f(x + 1) - f(x - 1)) - 9f(x - 2) - f(x - 3)) / 60delta_x
+        # df / dx = (f(x + 3) - 9f(x+2) + 45(f(x + 1) - f(x - 1)) + 9f(x - 2) - f(x - 3)) / 60delta_x
         if order == 4:
-            return (I[index + 2] - 8 * I[index + 1] + 8 * I[index - 1] - I[index - 2]) / 12
+            return (I[index + 2] - 8 * I[index + 1] + 8 * I[index - 1] - I[index - 2]) / -12
         else:
-            return (I[index + 3] - 9 * I[index + 1] + 45 * (I[index + 1] - I[index - 1]) + 9 * I[index - 2] - I[
-                index - 3]) / 60
+            b = 3
+            c = -27 + 8 * b
+            return ((I[index + 3] - I[index - 3]) - b * (I[index + 2] - I[index - 2])
+                    + c * (I[index + 1] - I[index - 1])) / (6 - 4 * b + 2 * c)
 
     I = I.T if axis == 1 else I
     width, height = I.shape[:2]
@@ -123,10 +121,14 @@ def calTextureAngle(img, order=4, stride=None):
     return fai, sum(C_list) / len(C_list)
 
 
-fai, _ = calTextureAngle(img, 5)
-error_v = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
-delta_fai = abs(fai - real_fai)
-error_fai = abs(1 - fai / real_fai) * 100
-print("fai = %.2f°, tan(fai) = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi)))
-print("delta_fai = %.2f°, error_fai = %.2f%%, error_v = %.2f%%" % (delta_fai, error_fai, error_v))
+if __name__ == '__main__':
+    real_fai = 11.6
+    img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    fai, _ = calTextureAngle(img, 5)
+    error_v = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
+    delta_fai = abs(fai - real_fai)
+    error_fai = abs(1 - fai / real_fai) * 100
+    print("fai = %.2f°, tan(fai) = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi)))
+    print("delta_fai = %.2f°, error_fai = %.2f%%, error_v = %.2f%%" % (delta_fai, error_fai, error_v))
 
