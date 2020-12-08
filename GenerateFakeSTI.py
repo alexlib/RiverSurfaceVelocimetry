@@ -9,7 +9,7 @@ import os
 # for i in range(0, height, step):
 #     img[i, :] = (256.0 / (i % step + 1)) / 256
 
-img = cv2.imread("fai=71.6.png")
+img = cv2.imread("sti_imgs/fai=71.6.png")
 height, width = img.shape[:2]
 
 rotate_angle = -20

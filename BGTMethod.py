@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-img = cv2.imread('fai=51.6.png')
+img = cv2.imread('sti_imgs/fai=51.6.png')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
