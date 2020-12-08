@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-img = cv2.imread('sti_imgs/fai=51.6.png')
+img = cv2.imread('sti_imgs/fai=11.6.png')
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
@@ -23,20 +23,37 @@ def calPartialDerivative(I, axis=0, order=4):
         # df / dx = (f(x + 2) - 8f(x+1) + 8f(x - 1) - f(x - 2)) / 12delta_x
         # df / dx = (f(x + 3) - 9f(x+1) + 45(f(x + 1) - f(x - 1)) - 9f(x - 2) - f(x - 3)) / 60delta_x
         if order == 4:
-            return (I[index + 2] - 8 * I[index + 1] + 8 * I[index - 1] - I[index - 2]) / -12
+            return (I[index + 2] - 8 * I[index + 1] + 8 * I[index - 1] - I[index - 2]) / 12
         else:
             return (I[index + 3] - 9 * I[index + 1] + 45 * (I[index + 1] - I[index - 1]) + 9 * I[index - 2] - I[
                 index - 3]) / 60
 
     I = I.T if axis == 1 else I
     width, height = I.shape[:2]
+    I_x = np.zeros((width, height), np.float)
     indent = 2 if order == 4 else 3
-    I_x = np.zeros((width - 2 * indent, height - 2 * indent), np.float32)
 
-    for i in range(indent, width - indent):
-        I_line = I[i, :]
-        for j in range(indent, height - indent):
-            I_x[i - indent, j - indent] = calDerivative(I_line, j, order)
+    # for i in range(indent, width - indent):
+    #     I_line = I[i, :]
+    #     for j in range(indent, height - indent):
+    #         I_x[i, j] = calDerivative(I_line, j, order)
+
+    for i in range(width):
+        for j in range(height):
+            if j == 0:
+                I_x[i, j] = I[i, j+1] - I[i, j]
+            elif j == 1:
+                I_x[i, j] = (I[i, j+1] - I[i, j-1]) / 2
+            elif j == 2:
+                    I_x[i, j] = calDerivative(I[i, :], j, 4)
+            elif 2 < j < height - 3:
+                I_x[i, j] = calDerivative(I[i, :], j, order)
+            elif j == height - 3:
+                I_x[i, j] = calDerivative(I[i, :], j, 4)
+            elif j == height - 2:
+                I_x[i, j] = (I[i, j+1] - I[i, j-1]) / 2
+            else:
+                I_x[i, j] = I[i, j] - I[i, j-1]
 
     return I_x.T if axis == 1 else I_x
 
@@ -56,43 +73,40 @@ def calJIntegral(I1, I2):
     return Jxx
 
 
+def calTextureAngle(img, order=4):
+    """
+    cal the texture angle of the input img
+    :param img: 输入图像像素矩阵
+    :param order: 求导阶次
+    :return: 纹理角fai（角度）和图像清晰度C
+    """
+    img = img.astype(np.int)
+    I_x = calPartialDerivative(img, axis=0, order=order)
+    I_t = calPartialDerivative(img, axis=1, order=order)
+    Jxx = calJIntegral(I_x, I_x)
+    Jxt = calJIntegral(I_x, I_t)
+    Jtt = calJIntegral(I_t, I_t)
+    fai = np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2 / np.math.pi * 180 + 90
+    C = np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt)
+    return fai, C
+
+
 # order为求偏导阶次，I_x, I_t = img(x,t)分别对x,t求偏导矩阵
-order = 5
-img = img.astype(np.int)
-I_x = calPartialDerivative(img, axis=0, order=order)
-I_t = calPartialDerivative(img, axis=1, order=order)
-# 赵浩源版的偏度计算方法
+# order = 4
+# img = img.astype(np.int)
+# I_x = calPartialDerivative(img, axis=0, order=order)
+# I_t = calPartialDerivative(img, axis=1, order=order)
+# # 赵浩源版的偏度计算方法
 # I_x = cv2.Sobel(img, -1, 1, 0).astype(np.int)
 # I_t = cv2.Sobel(img, -1, 0, 1).astype(np.int)
-
-# Jxx = I_x*I_x在img上的二重积分，Jxt, Jtt类推
-Jxx = calJIntegral(I_x, I_x)
-Jxt = calJIntegral(I_x, I_t)
-Jtt = calJIntegral(I_t, I_t)
-# fai 纹理角
-fai = np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2
-C = np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt)
-print("fai = %.2f, tan(fai) = %.2f, C = %.2f" % (fai/np.math.pi*180, np.math.tan(fai), C))
-
-# stride_x, stride_y = 20, 20
-# fai_list, C_list = [], []
-# for i in range(0, img.shape[0] // stride_x):
-#     for j in range(0, img.shape[1] // stride_y):
-#         if i == img.shape[0] // stride_x and j == img.shape[1] // stride_y:
-#             img_temp = img[i*stride_x::, j*stride_y::]
-#         elif i == img.shape[0] // stride_x and j != img.shape[1] // stride_y:
-#             img_temp = img[i*stride_x::, j*stride_y: (j+1)*stride_y]
-#         elif i != img.shape[0] // stride_x and j == img.shape[1] // stride_y:
-#             img_temp = img[i*stride_x: (i+1)*stride_x, j*stride_y::]
-#         else:
-#             img_temp = img[i*stride_x: (i+1)*stride_x, j*stride_y: (j+1)*stride_y]
-#         I_x = cv2.Sobel(img_temp, -1, 1, 0).astype(np.int)
-#         I_t = cv2.Sobel(img_temp, -1, 0, 1).astype(np.int)
-#         Jxx = calJIntegral(I_x, I_x)
-#         Jxt = calJIntegral(I_x, I_t)
-#         Jtt = calJIntegral(I_t, I_t)
-#         fai_list.append(np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2)
-#         C_list.append(np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt))
-# fai = (np.array(fai_list).reshape(1, -1) * np.array(C_list).reshape(1, -1)).sum() / sum(C_list)
-# print("fai = %.2f, tan(fai) = %.2f" % (fai/np.math.pi*180, np.math.tan(fai)))
+#
+# # Jxx = I_x*I_x在img上的二重积分，Jxt, Jtt类推
+# Jxx = calJIntegral(I_x, I_x)
+# Jxt = calJIntegral(I_x, I_t)
+# Jtt = calJIntegral(I_t, I_t)
+# # fai 纹理角
+# fai = np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2 / np.math.pi * 180 + 90
+# C = np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt)
+fai, C = calTextureAngle(img, 4)
+print("fai = %.2f°, tan(fai) = %.2f, C = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi), C))
 
