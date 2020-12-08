@@ -1,7 +1,8 @@
 import cv2
 import numpy as np
 
-img = cv2.imread('sti_imgs/fai=11.6.png')
+real_fai = 71.6
+img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
 img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
@@ -41,19 +42,19 @@ def calPartialDerivative(I, axis=0, order=4):
     for i in range(width):
         for j in range(height):
             if j == 0:
-                I_x[i, j] = I[i, j+1] - I[i, j]
+                I_x[i, j] = I[i, j + 1] - I[i, j]
             elif j == 1:
-                I_x[i, j] = (I[i, j+1] - I[i, j-1]) / 2
+                I_x[i, j] = (I[i, j + 1] - I[i, j - 1]) / 2
             elif j == 2:
-                    I_x[i, j] = calDerivative(I[i, :], j, 4)
+                I_x[i, j] = calDerivative(I[i, :], j, 4)
             elif 2 < j < height - 3:
                 I_x[i, j] = calDerivative(I[i, :], j, order)
             elif j == height - 3:
                 I_x[i, j] = calDerivative(I[i, :], j, 4)
             elif j == height - 2:
-                I_x[i, j] = (I[i, j+1] - I[i, j-1]) / 2
+                I_x[i, j] = (I[i, j + 1] - I[i, j - 1]) / 2
             else:
-                I_x[i, j] = I[i, j] - I[i, j-1]
+                I_x[i, j] = I[i, j] - I[i, j - 1]
 
     return I_x.T if axis == 1 else I_x
 
@@ -67,46 +68,62 @@ def calJIntegral(I1, I2):
     """
     I = I1 * I2
     Jxx = 0
-    for i in range(I.shape[0]-1):
-        for j in range(I.shape[1]-1):
-            Jxx += (I[i, j] + I[i, j+1] + I[i+1, j] + I[i+1, j+1]) / 4
+    for i in range(I.shape[0] - 1):
+        for j in range(I.shape[1] - 1):
+            Jxx += (I[i, j] + I[i, j + 1] + I[i + 1, j] + I[i + 1, j + 1]) / 4
     return Jxx
 
 
-def calTextureAngle(img, order=4):
+def calTextureAngle(img, order=4, stride=None):
     """
     cal the texture angle of the input img
     :param img: 输入图像像素矩阵
     :param order: 求导阶次
+    :param stride: 切分图片步长，分为x和t两个方向，每个方向值必须大于10且小于宽或高；仅x时,t用x的值替代
     :return: 纹理角fai（角度）和图像清晰度C
     """
     img = img.astype(np.int)
+    width, height = img.shape[:2]
     I_x = calPartialDerivative(img, axis=0, order=order)
     I_t = calPartialDerivative(img, axis=1, order=order)
-    Jxx = calJIntegral(I_x, I_x)
-    Jxt = calJIntegral(I_x, I_t)
-    Jtt = calJIntegral(I_t, I_t)
-    fai = np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2 / np.math.pi * 180 + 90
-    C = np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt)
-    return fai, C
+
+    if stride is None:
+        stride_x, stride_y = width, height
+    elif len(stride) == 1:
+        stride_x, stride_y = max(min(stride[0], width), 10), max(min(stride[0], height), 10)
+    else:
+        stride_x, stride_y = max(min(stride[0], width), 10), max(min(stride[1], height), 10)
+
+    fai_list, C_list = [], []
+    for i in range(width // stride_x):
+        for j in range(height // stride_y):
+            if i == width // stride_x - 1 and j == height // stride_y - 1:
+                I_x_part = I_x[i * stride_x::, j * stride_y::]
+                I_t_part = I_t[i * stride_x::, j * stride_y::]
+            elif i == width // stride_x - 1 and j != height // stride_y - 1:
+                I_x_part = I_x[i * stride_x::, j * stride_y: (j + 1) * stride_y]
+                I_t_part = I_t[i * stride_x::, j * stride_y: (j + 1) * stride_y]
+            elif i != width // stride_x - 1 and j == height // stride_y - 1:
+                I_x_part = I_x[i * stride_x: (i + 1) * stride_x, j * stride_y::]
+                I_t_part = I_t[i * stride_x: (i + 1) * stride_x, j * stride_y::]
+            else:
+                I_x_part = I_x[i * stride_x: (i + 1) * stride_x, j * stride_y: (j + 1) * stride_y]
+                I_t_part = I_t[i * stride_x: (i + 1) * stride_x, j * stride_y: (j + 1) * stride_y]
+
+            Jxx_part = calJIntegral(I_x_part, I_x_part)
+            Jxt_part = calJIntegral(I_x_part, I_t_part)
+            Jtt_part = calJIntegral(I_t_part, I_t_part)
+
+            fai_list.append((np.math.atan(2 * Jxt_part / (Jtt_part - Jxx_part)) / 2 / np.math.pi * 180 + 90) % 90)
+            C_list.append(np.math.sqrt((Jxx_part - Jtt_part) ** 2 + 4 * Jxt_part ** 2) / (Jxx_part + Jtt_part))
+
+    fai_list = np.array(fai_list).reshape((1, -1))
+    C_list = np.array(C_list).reshape((1, -1))
+    fai = (fai_list * C_list).sum() / C_list.sum()
+    return fai, sum(C_list) / len(C_list)
 
 
-# order为求偏导阶次，I_x, I_t = img(x,t)分别对x,t求偏导矩阵
-# order = 4
-# img = img.astype(np.int)
-# I_x = calPartialDerivative(img, axis=0, order=order)
-# I_t = calPartialDerivative(img, axis=1, order=order)
-# # 赵浩源版的偏度计算方法
-# I_x = cv2.Sobel(img, -1, 1, 0).astype(np.int)
-# I_t = cv2.Sobel(img, -1, 0, 1).astype(np.int)
-#
-# # Jxx = I_x*I_x在img上的二重积分，Jxt, Jtt类推
-# Jxx = calJIntegral(I_x, I_x)
-# Jxt = calJIntegral(I_x, I_t)
-# Jtt = calJIntegral(I_t, I_t)
-# # fai 纹理角
-# fai = np.math.atan(2 * Jxt / (Jtt - Jxx)) / 2 / np.math.pi * 180 + 90
-# C = np.math.sqrt((Jxx - Jtt) ** 2 + 4 * Jxt ** 2) / (Jxx + Jtt)
-fai, C = calTextureAngle(img, 4)
-print("fai = %.2f°, tan(fai) = %.2f, C = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi), C))
+fai, _ = calTextureAngle(img, 5)
+error = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
+print("fai = %.2f°, tan(fai) = %.2f, error of tan(fai) = %.2f%%" % (fai, np.math.tan(fai / 180 * np.math.pi), error))
 
