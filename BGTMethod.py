@@ -124,6 +124,9 @@ def calTextureAngle(img, order=4, stride=None):
 
 
 fai, _ = calTextureAngle(img, 5)
-error = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
-print("fai = %.2f°, tan(fai) = %.2f, error of tan(fai) = %.2f%%" % (fai, np.math.tan(fai / 180 * np.math.pi), error))
+error_v = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
+delta_fai = abs(fai - real_fai)
+error_fai = abs(1 - fai / real_fai) * 100
+print("fai = %.2f°, tan(fai) = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi)))
+print("delta_fai = %.2f°, error_fai = %.2f%%, error_v = %.2f%%" % (delta_fai, error_fai, error_v))
 
