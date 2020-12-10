@@ -122,8 +122,9 @@ def calTextureAngle(img, order=4, stride=None):
 
 
 if __name__ == '__main__':
-    real_fai = 11.6
-    img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
+    real_fai = 80
+    img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_fai))
+    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     fai, _ = calTextureAngle(img, 5)
     error_v = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
