@@ -78,7 +78,7 @@ def calTextureAngle(img, order=4, stride=None):
     :param img: 输入图像像素矩阵
     :param order: 求导阶次
     :param stride: 切分图片步长，分为x和t两个方向，每个方向值必须大于10且小于宽或高；仅x时,t用x的值替代
-    :return: 纹理角fai（角度）和图像清晰度C
+    :return: 纹理角alpha（角度）
     """
     img = img.astype(np.int)
     width, height = img.shape[:2]
@@ -92,7 +92,7 @@ def calTextureAngle(img, order=4, stride=None):
     else:
         stride_x, stride_y = max(min(stride[0], width), 10), max(min(stride[1], height), 10)
 
-    fai_list, C_list = [], []
+    alpha_list, C_list = [], []
     for i in range(width // stride_x):
         for j in range(height // stride_y):
             if i == width // stride_x - 1 and j == height // stride_y - 1:
@@ -111,25 +111,31 @@ def calTextureAngle(img, order=4, stride=None):
             Jxx_part = calJIntegral(I_x_part, I_x_part)
             Jxt_part = calJIntegral(I_x_part, I_t_part)
             Jtt_part = calJIntegral(I_t_part, I_t_part)
+            
+            tan2Fai = 2 * Jxt_part / (Jtt_part - Jxx_part)
 
-            fai_list.append((np.math.atan(2 * Jxt_part / (Jtt_part - Jxx_part)) / 2 / np.math.pi * 180 + 90) % 90)
+            alpha_list.append((np.math.atan(tan2Fai) / 2 / np.math.pi * 180 + 90) % 90)
             C_list.append(np.math.sqrt((Jxx_part - Jtt_part) ** 2 + 4 * Jxt_part ** 2) / (Jxx_part + Jtt_part))
 
-    fai_list = np.array(fai_list).reshape((1, -1))
+    alpha_list = np.array(alpha_list).reshape((1, -1))
     C_list = np.array(C_list).reshape((1, -1))
-    fai = (fai_list * C_list).sum() / C_list.sum()
-    return fai, sum(C_list) / len(C_list)
+    alpha = (alpha_list * C_list).sum() / C_list.sum()
+    return alpha
 
 
 if __name__ == '__main__':
-    real_fai = 80
-    img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_fai))
-    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_fai))
+    # real_alpha = 41.6
+    # img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
+    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
+
+    start = 200
+    img = cv2.imread('12.4 stiv images/%d_%d_599.jpg' % (start, start + 90))
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    fai, _ = calTextureAngle(img, 5)
-    error_v = abs(1 - np.math.tan(fai / 180 * np.math.pi) / np.math.tan(real_fai / 180 * np.math.pi)) * 100
-    delta_fai = abs(fai - real_fai)
-    error_fai = abs(1 - fai / real_fai) * 100
-    print("fai = %.2f°, tan(fai) = %.2f" % (fai, np.math.tan(fai / 180 * np.math.pi)))
-    print("delta_fai = %.2f°, error_fai = %.2f%%, error_v = %.2f%%" % (delta_fai, error_fai, error_v))
+    alpha = calTextureAngle(img, 5)
+    print("alpha = %.2f°, tan(alpha) = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
+
+    # error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
+    # delta_alpha = abs(alpha - real_alpha)
+    # error_alpha = abs(1 - alpha / real_alpha) * 100
+    # print("delta_alpha = %.2f°, error_alpha = %.2f%%, error_v = %.2f%%" % (delta_alpha, error_alpha, error_v))
 
