@@ -1,5 +1,8 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import mean_squared_error
+import time
 
 
 def calPartialDerivative(I, axis=0, order=4):
@@ -128,11 +131,51 @@ if __name__ == '__main__':
     # img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
     # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
 
-    start = 200
-    img = cv2.imread('12.4 stiv images/%d_%d_599.jpg' % (start, start + 90))
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    alpha = calTextureAngle(img, 5)
-    print("alpha = %.2f°, tan(alpha) = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
+    start = time.time()
+
+    label = np.loadtxt('speed_label.txt')
+    label_cal = np.zeros((label.shape[0], 1), dtype=np.float)
+    err_cal = label_cal
+    for i in range(label.shape[0]):
+        img = cv2.imread('12.4 stiv images/%d_%d_599.jpg' % (i, 90 + i))
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        label_cal[i, 0] = np.math.tan(calTextureAngle(img, 5, (3, 3))) * 0.124665
+        err_cal[i, 0] = abs(1 - label_cal[i, 0] / label[i, 0])
+        print('processing img %d' % i)
+
+    end = time.time()
+
+    err_cal_smooth = err_cal.copy()
+    for i in range(err_cal_smooth.shape[0]):
+        if err_cal_smooth[i, 0] > 3:
+            err_cal_smooth[i, 0] = 3
+
+    plt.figure()
+    plt.plot(np.arange(label.shape[0]), label[:, 0], 'r')
+    plt.plot(np.arange(label.shape[0]), label_cal[:, 0], 'b')
+    plt.xlabel('frame')
+    plt.ylabel('v(m/s)')
+    plt.legend(['real', 'BGT'])
+    plt.grid(True)
+
+    plt.figure()
+    plt.plot(np.arange(label.shape[0]), err_cal[:, 0], 'r')
+    plt.xlabel('frame')
+    plt.ylabel('err_v(m/s)')
+    plt.legend(['err_v'])
+    plt.grid(True)
+
+    plt.figure()
+    plt.plot(np.arange(label.shape[0]), err_cal_smooth[:, 0], 'r')
+    plt.xlabel('frame')
+    plt.ylabel('err_v_smooth(m/s)')
+    plt.legend(['err_v_smooth'])
+    plt.grid(True)
+
+    plt.show()
+
+    rmse = mean_squared_error(label[:, 0], label_cal)
+    print('rmse of BGT in 12.4 stiv images is %.5e, cal cost time: %fs' % (rmse, end - start))
 
     # error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
     # delta_alpha = abs(alpha - real_alpha)
