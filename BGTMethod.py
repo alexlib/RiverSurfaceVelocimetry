@@ -86,8 +86,8 @@ def calSlopeAndAlpha(Ix, It):
     for i in range(Ix.shape[0]):
         for j in range(Ix.shape[1]):
             slope = np.math.sqrt(Ix[i, j] ** 2 + It[i, j] ** 2)
-            sinAlpha, cosAlpha = Ix[i, j] / slope if slope != 0 else np.math.sqrt(0.5), \
-                                 It[i, j] / slope if slope != 0 else np.math.sqrt(0.5)
+            cosAlpha, sinAlpha = Ix[i, j] / slope if slope != 0 else 0, \
+                                 It[i, j] / slope if slope != 0 else 0
             SAndAlpha[i, j, :] = [slope, sinAlpha, cosAlpha]
     return SAndAlpha
 
@@ -147,11 +147,11 @@ def calTextureAngle(img, diff_order=4, stride=None, method="BGT"):
                 SAndAlpha = calSlopeAndAlpha(I_x_part, I_t_part)
                 # numerator = integral of slope * sin(2alpha) on I ≈ 2 * Jxt
                 # denominator = integral of slope * cos(2alpha) on I ≈ Jxx - Jtt
-                numerator = calJIntegral(SAndAlpha[:, :, 0], 2 * SAndAlpha[:, :, 1] * SAndAlpha[i, j, 2])
-                denominator = calJIntegral(SAndAlpha[:, :, 0], 2 * SAndAlpha[:, :, 1] * SAndAlpha[i, j, 1] - 1)
+                numerator = calJIntegral(SAndAlpha[:, :, 0], 2 * SAndAlpha[:, :, 1] * SAndAlpha[:, :, 2])
+                denominator = calJIntegral(SAndAlpha[:, :, 0], SAndAlpha[:, :, 2] ** 2 - SAndAlpha[:, :, 1] ** 2)
 
                 tan2Fai = numerator / denominator
-                alpha_list.append((np.math.atan(tan2Fai) / 2 / np.math.pi * 180) % 90)
+                alpha_list.append((90 - np.math.atan(tan2Fai) / 2 / np.math.pi * 180) % 90)
                 C_list.append(np.math.sqrt((denominator ** 2 + numerator ** 2) / (Jxx_part + Jtt_part)))
 
     alpha_list = np.array(alpha_list).reshape((1, -1))
@@ -161,13 +161,13 @@ def calTextureAngle(img, diff_order=4, stride=None, method="BGT"):
 
 
 if __name__ == '__main__':
-    real_alpha = 41.6
-    # img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
-    img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
+    real_alpha = 70
+    img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
+    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
 
-    alpha = calTextureAngle(img, diff_order=4, stride=None, method="BGT")
+    alpha = calTextureAngle(img, diff_order=5, stride=None, method="WB-BGT")
     print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
-    print("alpha = %.2f°, tan_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
+    print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
 
     error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
     delta_alpha = abs(alpha - real_alpha)

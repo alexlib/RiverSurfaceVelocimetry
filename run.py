@@ -8,7 +8,7 @@ if __name__ == '__main__':
     err_cal = label_cal
     for i in range(label.shape[0]):
         img = cv2.imread('12.4 stiv images/%d_%d_599.jpg' % (i, 90 + i))
-        label_cal[i, 0] = np.math.tan(calTextureAngle(img, 5, (3, 3))) * 0.124665
+        label_cal[i, 0] = np.math.tan(calTextureAngle(img, 5, [2, 2], "WB-BGT")) * 0.124665
         err_cal[i, 0] = abs(1 - label_cal[i, 0] / label[i, 0])
         print('processing img %d' % i)
 
