@@ -1,6 +1,10 @@
 /.idea
 /fake stiv imgs
 /12.4 stiv images
+/images
+.ipynb_checkpoints\
+sti\
+sti_imgs\
 
 speed_label.txt
 speed_label_readme.txt

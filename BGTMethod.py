@@ -1,23 +1,22 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.metrics import mean_squared_error
-import time
 
 
 def calPartialDerivative(I, axis=0, diff_order=4):
     """
-    :param I: 待求偏导的灰度图片像素矩阵
-    :param axis: 求偏导方向，默认x方向
-    :param diff_order: 求偏导方法，分为4阶或5阶，详参考Fujita-2007论文
+    计算图像的梯度
+        :param I: 待求偏导的灰度图片像素矩阵
+        :param axis: 求偏导方向，默认x方向
+        :param diff_order: 求偏导方法，分为4阶或5阶，详参考Fujita-2007论文
     :return: 对应偏导矩阵
     """
 
     def calDerivative(I, index, diff_order):
         """
-        :param I: 待求偏导图像行向量
-        :param index: 求偏导位置
-        :param diff_order: 差分偏导阶次，具体公式见注释
+        具体计算梯度公式
+            :param I: 待求偏导图像行向量
+            :param index: 求偏导位置
+            :param diff_order: 差分偏导阶次，具体公式见注释
         :return: 对应index位置的差分偏导值
         """
         # df / dx = (f(x + 2) - 8f(x+1) + 8f(x - 1) - f(x - 2)) / 12delta_x
@@ -33,12 +32,6 @@ def calPartialDerivative(I, axis=0, diff_order=4):
     I = I.T if axis == 1 else I
     width, height = I.shape[:2]
     I_x = np.zeros((width, height), np.float)
-    indent = 2 if diff_order == 4 else 3
-
-    # for i in range(indent, width - indent):
-    #     I_line = I[i, :]
-    #     for j in range(indent, height - indent):
-    #         I_x[i, j] = calDerivative(I_line, j, order)
 
     for i in range(width):
         for j in range(height):
@@ -63,9 +56,9 @@ def calPartialDerivative(I, axis=0, diff_order=4):
 def calJIntegral(I1, I2):
     """
     计算在I定义的区域上I1*I2的积分
-    :param I1: 偏导数1，可为I关于x或t的偏导
-    :param I2: 偏导数2可为I关于x或t的偏导
-    :return: I1*I2在I定义区域上的积分
+        :param I1: 偏导数1，可为I关于x或t的偏导
+        :param I2: 偏导数2可为I关于x或t的偏导
+    :return: I1 * I2 在I定义区域上的积分
     """
     I = I1 * I2
     Jxx = 0
@@ -78,9 +71,9 @@ def calJIntegral(I1, I2):
 def calSlopeAndAlpha(Ix, It):
     """
     计算WB-BGT法用的slope，sin(alpha), cos(alpha)矩阵
-    :param Ix: 图片区域I上对x的偏导数
-    :param It: 图片区域I上对t的偏导数
-    :return: [slope, sin(alpha), cos(alpha)]
+        :param Ix: 图片区域I上对x的偏导数
+        :param It: 图片区域I上对t的偏导数
+    :return: SAndSlope: [slope, sin(alpha), cos(alpha)]
     """
     SAndAlpha = np.zeros((Ix.shape + (3,)), dtype=np.float)
     for i in range(Ix.shape[0]):
@@ -92,16 +85,27 @@ def calSlopeAndAlpha(Ix, It):
     return SAndAlpha
 
 
-def calTextureAngle(img, diff_order=4, stride=None, method="BGT"):
+def calTextureAngle(img, diff_order=4, method="BGT", stride=None, norm=False, histEqualize=False):
     """
     cal the texture angle of the input img
-    :param img: 输入图像像素矩阵
-    :param diff_order: 求导阶次
-    :param stride: 切分图片步长，分为x和t两个方向，每个方向值必须大于10且小于宽或高；仅x时,t用x的值替代
-    :param method: 计算纹理角的方法，可选BGT或WB-BGT
+        :param img: 输入图像像素矩阵
+        :param diff_order: 求导阶次
+        :param stride: 切分图片步长，分为x和t两个方向，每个方向值必须大于10且小于宽或高；仅x时,t用x的值替代
+        :param method: 计算纹理角的方法，可选BGT或WB-BGT(Tsubaki 2010)
+        :param norm: 是否进行列标准化，默认为False
+        :param histEqualize: 是否进行直方图均衡（对灰度图进行），先于列标准化，默认为False
     :return: 纹理角alpha（角度）
     """
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    if histEqualize:
+        img = cv2.equalizeHist(img)
+
+    if norm:
+        mu = np.mean(img, axis=0)
+        sigma = np.std(img, axis=0)
+        img = (img - mu) / sigma
+
     img = img.astype(np.int)
     width, height = img.shape[:2]
     I_x = calPartialDerivative(img, axis=0, diff_order=diff_order)
@@ -161,15 +165,19 @@ def calTextureAngle(img, diff_order=4, stride=None, method="BGT"):
 
 
 if __name__ == '__main__':
-    real_alpha = 70
-    img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
-    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
+    # real_alpha = 65
+    # # img = cv2.imread('1.png')
+    # img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
+    # # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
+    #
+    # alpha = calTextureAngle(img, diff_order=4, method="BGT", stride=None, histEqualize=False)
+    # print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
+    # print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
+    #
+    # error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
+    # delta_alpha = abs(alpha - real_alpha)
+    # error_alpha = abs(1 - alpha / real_alpha) * 100
+    # print("delta_alpha = %.2f°, error_alpha = %.2f%%, error_v = %.2f%%" % (delta_alpha, error_alpha, error_v))
 
-    alpha = calTextureAngle(img, diff_order=5, stride=None, method="WB-BGT")
-    print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
-    print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
-
-    error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
-    delta_alpha = abs(alpha - real_alpha)
-    error_alpha = abs(1 - alpha / real_alpha) * 100
-    print("delta_alpha = %.2f°, error_alpha = %.2f%%, error_v = %.2f%%" % (delta_alpha, error_alpha, error_v))
+    bgt_err, wbbgt_err = [], []
+    for i in range()

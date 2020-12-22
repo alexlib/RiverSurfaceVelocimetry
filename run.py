@@ -1,4 +1,7 @@
 from BGTMethod import *
+import matplotlib.pyplot as plt
+import time
+from sklearn.metrics import mean_squared_error
 
 if __name__ == '__main__':
     start = time.time()
