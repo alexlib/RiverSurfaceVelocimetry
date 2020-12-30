@@ -4,9 +4,9 @@
 /images
 .ipynb_checkpoints\
 sti\
-sti_imgs\
 
 speed_label.txt
 speed_label_readme.txt
 *.jpg
 *.log
+*.npy

@@ -1,5 +1,7 @@
 import cv2
 import numpy as np
+import os
+import matplotlib.pyplot as plt
 
 
 def calPartialDerivative(I, axis=0, diff_order=4):
@@ -33,6 +35,8 @@ def calPartialDerivative(I, axis=0, diff_order=4):
     width, height = I.shape[:2]
     I_x = np.zeros((width, height), np.float)
 
+    # 最外侧采用前向和后向差分求导，次外侧采用中间差分求导，次次外侧采用4阶差分求导
+    # 从第4个元素开始，根据输入order决定采用4阶还是5阶差分求导
     for i in range(width):
         for j in range(height):
             if j == 0:
@@ -165,19 +169,12 @@ def calTextureAngle(img, diff_order=4, method="BGT", stride=None, norm=False, hi
 
 
 if __name__ == '__main__':
-    # real_alpha = 65
-    # # img = cv2.imread('1.png')
-    # img = cv2.imread('fake stiv imgs/%s_170.jpg' % str(real_alpha))
-    # # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
-    #
-    # alpha = calTextureAngle(img, diff_order=4, method="BGT", stride=None, histEqualize=False)
-    # print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
-    # print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
-    #
-    # error_v = abs(1 - np.math.tan(alpha / 180 * np.math.pi) / np.math.tan(real_alpha / 180 * np.math.pi)) * 100
-    # delta_alpha = abs(alpha - real_alpha)
-    # error_alpha = abs(1 - alpha / real_alpha) * 100
-    # print("delta_alpha = %.2f°, error_alpha = %.2f%%, error_v = %.2f%%" % (delta_alpha, error_alpha, error_v))
+    real_alpha = 76
+    img = cv2.imread('1.png')
+    # img = cv2.imread('sti/test.jpg')
+    # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
 
-    bgt_err, wbbgt_err = [], []
-    for i in range()
+    alpha = calTextureAngle(img, diff_order=4, method="BGT", stride=None, histEqualize=False)
+    alpha = 90 - alpha
+    print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
+    print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))
