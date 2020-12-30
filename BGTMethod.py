@@ -1,3 +1,4 @@
+# Bright Gradient Tensor Method
 import cv2
 import numpy as np
 import os

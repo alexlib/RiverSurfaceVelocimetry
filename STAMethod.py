@@ -1,3 +1,4 @@
+# Two-Dimension Auto-Correlation based on Space-Time Image Method
 import cv2
 import numpy as np
 from LinearPolar import RecTangle2Polar
