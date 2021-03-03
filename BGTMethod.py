@@ -90,7 +90,7 @@ def calSlopeAndAlpha(Ix, It):
     return SAndAlpha
 
 
-def calTextureAngle(img, diff_order=4, method="BGT", stride=None, norm=False, histEqualize=False):
+def calTextureAngleBGT(img, diff_order=4, method="BGT", stride=None, norm=False, histEqualize=False):
     """
     cal the texture angle of the input img
         :param img: 输入图像像素矩阵
@@ -101,7 +101,8 @@ def calTextureAngle(img, diff_order=4, method="BGT", stride=None, norm=False, hi
         :param histEqualize: 是否进行直方图均衡（对灰度图进行），先于列标准化，默认为False
     :return: 纹理角alpha（角度）
     """
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    if len(img.shape) > 2:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
     if histEqualize:
         img = cv2.equalizeHist(img)
@@ -175,7 +176,7 @@ if __name__ == '__main__':
     # img = cv2.imread('sti/test.jpg')
     # img = cv2.imread('sti_imgs/fai=%s.png' % str(real_alpha))
 
-    alpha = calTextureAngle(img, diff_order=4, method="BGT", stride=None, histEqualize=False)
+    alpha = calTextureAngleBGT(img, diff_order=4, method="BGT", stride=None, histEqualize=False)
     alpha = 90 - alpha
     print("real_alpha = %.2f°, tan_real_alpha = %.2f" % (real_alpha, np.math.tan(real_alpha / 180 * np.math.pi)))
     print("cal_alpha = %.2f°, tan_cal_alpha = %.2f" % (alpha, np.math.tan(alpha / 180 * np.math.pi)))

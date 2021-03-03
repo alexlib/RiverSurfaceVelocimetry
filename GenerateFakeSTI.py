@@ -12,11 +12,9 @@ import os
 img = cv2.imread("sti_imgs/fai=71.6.png")
 height, width = img.shape[:2]
 
-rotate_angle = -40
-M = cv2.getRotationMatrix2D(((width - 1) / 2.0, (height - 1) / 2.0), rotate_angle, 1)
+rotate_angle = -30
+M = cv2.getRotationMatrix2D(((width - 1) / 2.0, (height - 1) / 2.0), rotate_angle, 1.0)
 img_rotate = cv2.warpAffine(img, M, (width, height))
-cv2.imshow('img_merge', img_rotate/255)
-while True:
-    if cv2.waitKey(1000):
-        break
+cv2.imshow('img_merge', img_rotate)
+cv2.waitKey(0)
 cv2.destroyAllWindows()
