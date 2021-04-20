@@ -5,9 +5,12 @@
 .ipynb_checkpoints\
 sti\
 /height_compensate
+/test_images
+
 
 speed_label.txt
 speed_label_readme.txt
 *.jpg
 *.log
 *.npy
+*.mat

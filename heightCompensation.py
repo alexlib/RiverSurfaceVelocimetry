@@ -81,7 +81,7 @@ for index in range(len(Zc1)):
     else:
         beta = degrees(atan((h * tan(radians(alpha)) - (h / cos(radians(alpha)) - Zc1[index])
                              / sin(radians(alpha))) / (h - dh)))
-        zc1 = (h - dh) / cos(radians(beta)) * cos(alpha - beta)
+        zc1 = (h - dh) / cos(radians(beta)) * cos(radians(alpha - beta))
     objPoint = np.linalg.inv(rvec) @ (zc1 * np.linalg.inv(cameraMatrix) @
                                       np.reshape(np.array(list(testImagePoints[index]) + [1]), tvec.shape) - tvec)
     # 因为世界坐标选在原世界坐标系下，所以要减掉高度差
