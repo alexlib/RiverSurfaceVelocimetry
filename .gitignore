@@ -14,3 +14,4 @@ speed_label_readme.txt
 *.log
 *.npy
 *.mat
+uv.lock
